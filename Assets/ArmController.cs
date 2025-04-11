@@ -3,6 +3,7 @@ using UnityEngine;
 
 public class ArmController : MonoBehaviour
 {
+    public Transform baseArm;
     public Transform armUpper;
     public Transform armLower;
     public Transform wrist;
@@ -12,12 +13,20 @@ public class ArmController : MonoBehaviour
     private SerialPort serialPort;
     private float rotationSpeed = 50f;
     private bool portAvailable = false;
+    private string portName = "COM3"; 
+    private int baudRate = 9600; 
+
+    private float baseArmRotationY = 0f;
+    private float armUpperRotationX = 0f;
+    private float armLowerRotationX = 0f;
+    private float wristRotationX = 0f;
+    private float clawAngle = 0f;
 
     void Start()
     {
         try
         {
-            serialPort = new SerialPort("COM5", 9600); // Ajusta el puerto según necesites
+            serialPort = new SerialPort(portName, baudRate);
             serialPort.Open();
             portAvailable = true;
         }
@@ -30,66 +39,108 @@ public class ArmController : MonoBehaviour
 
     void Update()
     {
-        // Movimiento del brazo superior
-        if (Input.GetKey(KeyCode.Q))
-        {
-            armUpper.Rotate(Vector3.up * rotationSpeed * Time.deltaTime);
-            SendToSerial("U+");
-        }
-        if (Input.GetKey(KeyCode.A))
-        {
-            armUpper.Rotate(Vector3.down * rotationSpeed * Time.deltaTime);
-            SendToSerial("U-");
-        }
+        float deltaRotation = rotationSpeed * Time.deltaTime;
 
-        // Movimiento del brazo superior (horizontal)
+        // Movimiento horizontal de la base (270°)
         if (Input.GetKey(KeyCode.Z))
         {
-            armUpper.Rotate(Vector3.forward * rotationSpeed * Time.deltaTime);
-            SendToSerial("U+");
+            if (baseArmRotationY < 135f)
+            {
+                baseArm.Rotate(Vector3.up * deltaRotation);
+                baseArmRotationY += deltaRotation;
+                if (portAvailable) SendToSerial("U+");
+            }
         }
         if (Input.GetKey(KeyCode.X))
         {
-            armUpper.Rotate(Vector3.back * rotationSpeed * Time.deltaTime);
-            SendToSerial("U-");
+            if (baseArmRotationY > -135f)
+            {
+                baseArm.Rotate(Vector3.down * deltaRotation);
+                baseArmRotationY -= deltaRotation;
+                if (portAvailable) SendToSerial("U-");
+            }
         }
 
-        // Movimiento del brazo inferior
-        if (Input.GetKey(KeyCode.W))
+        // Movimiento brazo superior (120°)
+        if (Input.GetKey(KeyCode.A))
         {
-            armLower.Rotate(Vector3.forward * rotationSpeed * Time.deltaTime);
-            SendToSerial("L+");
+            if (armUpperRotationX < 60f)
+            {
+                armUpper.Rotate(Vector3.forward * deltaRotation);
+                armUpperRotationX += deltaRotation;
+                if (portAvailable) SendToSerial("U+");
+            }
         }
+        if (Input.GetKey(KeyCode.Q))
+        {
+            if (armUpperRotationX > -60f)
+            {
+                armUpper.Rotate(Vector3.back * deltaRotation);
+                armUpperRotationX -= deltaRotation;
+                if (portAvailable) SendToSerial("U-");
+            }
+        }
+
+        // Movimiento brazo inferior (180°)
         if (Input.GetKey(KeyCode.S))
         {
-            armLower.Rotate(Vector3.back * rotationSpeed * Time.deltaTime);
-            SendToSerial("L-");
+            if (armLowerRotationX < 10f)
+            {
+                armLower.Rotate(Vector3.forward * deltaRotation);
+                armLowerRotationX += deltaRotation;
+                if (portAvailable) SendToSerial("L+");
+            }
+        }
+        if (Input.GetKey(KeyCode.W))
+        {
+            if (armLowerRotationX > -90f)
+            {
+                armLower.Rotate(Vector3.back * deltaRotation);
+                armLowerRotationX -= deltaRotation;
+                if (portAvailable) SendToSerial("L-");
+            }
         }
 
-        // Movimiento de la muñeca
-        if (Input.GetKey(KeyCode.E))
-        {
-            wrist.Rotate(Vector3.forward * rotationSpeed * Time.deltaTime);
-            SendToSerial("W+");
-        }
+        // Movimiento vertical de la muñeca (tenaza) (120°)
         if (Input.GetKey(KeyCode.D))
         {
-            wrist.Rotate(Vector3.back * rotationSpeed * Time.deltaTime);
-            SendToSerial("W-");
+            if (wristRotationX < 60f)
+            {
+                wrist.Rotate(Vector3.forward * deltaRotation);
+                wristRotationX += deltaRotation;
+                if (portAvailable) SendToSerial("W+");
+            }
+        }
+        if (Input.GetKey(KeyCode.E))
+        {
+            if (wristRotationX > -60f)
+            {
+                wrist.Rotate(Vector3.back * deltaRotation);
+                wristRotationX -= deltaRotation;
+                if (portAvailable) SendToSerial("W-");
+            }
         }
 
-        // Movimiento de las garras
-        if (Input.GetKey(KeyCode.R))
-        {
-            clawR.Rotate(Vector3.right * rotationSpeed * Time.deltaTime);
-            clawL.Rotate(Vector3.left * rotationSpeed * Time.deltaTime);
-            SendToSerial("C+");
-        }
+        // Movimiento de la garra (máx apertura de 4.5cm ≈ 30° por lado)
         if (Input.GetKey(KeyCode.F))
         {
-            clawR.Rotate(Vector3.left * rotationSpeed * Time.deltaTime);
-            clawL.Rotate(Vector3.right * rotationSpeed * Time.deltaTime);
-            SendToSerial("C-");
+            if (clawAngle < 15f)
+            {
+                clawR.Rotate(Vector3.right * deltaRotation);
+                clawL.Rotate(Vector3.left * deltaRotation);
+                clawAngle += deltaRotation;
+                if (portAvailable) SendToSerial("C+");
+            }
+        }
+        if (Input.GetKey(KeyCode.R))
+        {
+            if (clawAngle > 0f)
+            {
+                clawR.Rotate(Vector3.left * deltaRotation);
+                clawL.Rotate(Vector3.right * deltaRotation);
+                clawAngle -= deltaRotation;
+                if (portAvailable) SendToSerial("C-");
+            }
         }
     }
 
